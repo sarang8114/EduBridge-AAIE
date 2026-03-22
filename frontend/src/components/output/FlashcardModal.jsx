@@ -1,55 +1,41 @@
+// FlashcardModal.jsx
 import { useState, useEffect } from "react";
 import { X, RefreshCw, ChevronLeft, ChevronRight, Loader, RotateCcw } from "lucide-react";
 import * as api from "../../services/api";
 
-const GRADIENTS = [
-  'from-purple-600 via-purple-500 to-pink-500',
-  'from-blue-600 via-blue-500 to-cyan-500',
-  'from-green-600 via-emerald-500 to-teal-500',
-  'from-orange-600 via-orange-500 to-yellow-500',
-  'from-red-600 via-rose-500 to-pink-500',
-  'from-indigo-600 via-purple-500 to-pink-500',
-  'from-teal-600 via-cyan-500 to-blue-500',
-  'from-amber-600 via-orange-500 to-red-500',
-];
+const CARD_COLORS = ["#4CAEE1","#5dade2","#1a9cd8","#2e86c1","#1f618d","#6c5ce7","#0984e3","#00b894"];
 
 const FlashcardModal = ({ flashcards, isLoading, error, topicName, selectedLanguage, onClose, onRetry }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-
-  // ── Explanation states ─────────────────────────────────────
-  const [showExplanation, setShowExplanation]           = useState(false);
-  const [explanation, setExplanation]                   = useState(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [explanation, setExplanation] = useState(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
-  const [explanationError, setExplanationError]         = useState(null);
+  const [explanationError, setExplanationError] = useState(null);
 
-  // Reset explanation when card changes
-  useEffect(() => {
-    setShowExplanation(false);
-    setExplanation(null);
-    setExplanationError(null);
-  }, [currentIndex]);
+  useEffect(() => { setShowExplanation(false); setExplanation(null); setExplanationError(null); }, [currentIndex]);
 
   if (isLoading) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4">
-      <div className="flex flex-col items-center space-y-4">
-        <Loader size={48} className="animate-spin text-green-500" />
-        <p className="text-gray-300 text-lg">Generating flashcards...</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(17,47,77,0.5)" }}>
+      <div className="flex flex-col items-center gap-3">
+        <Loader size={40} className="animate-spin" style={{ color: "var(--brand)" }} />
+        <p style={{ color: "var(--text-primary)" }}>Generating flashcards...</p>
       </div>
     </div>
   );
 
   if (error) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4">
-      <div className="bg-gray-800 rounded-xl p-6 max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(17,47,77,0.5)" }}>
+      <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-white">Error</h3>
-          <button onClick={onClose}><X size={24} className="text-gray-400" /></button>
+          <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>Error</h3>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={20} /></button>
         </div>
-        <div className="bg-red-900/20 border border-red-500 rounded-lg p-6">
-          <p className="text-red-300 text-center mb-4">Failed to generate flashcards: {error}</p>
-          <button onClick={onRetry} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition">
-            <RefreshCw size={16} /> Retry
+        <div className="rounded-xl p-4 text-center" style={{ background: "var(--alert)", border: "1px solid var(--alert-border)" }}>
+          <p className="text-sm mb-3" style={{ color: "var(--alert-text)" }}>Failed: {error}</p>
+          <button onClick={onRetry} className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{ background: "var(--brand)", color: "white", border: "none" }}>
+            <RefreshCw size={14} /> Retry
           </button>
         </div>
       </div>
@@ -58,113 +44,70 @@ const FlashcardModal = ({ flashcards, isLoading, error, topicName, selectedLangu
 
   if (!flashcards?.length) return null;
 
-  const card     = flashcards[currentIndex];
-  const total    = flashcards.length;
-  const gradient = GRADIENTS[currentIndex % GRADIENTS.length];
-
+  const card = flashcards[currentIndex];
+  const total = flashcards.length;
+  const cardColor = CARD_COLORS[currentIndex % CARD_COLORS.length];
   const goNext = () => { if (currentIndex < total - 1) { setCurrentIndex(i => i + 1); setIsFlipped(false); } };
   const goPrev = () => { if (currentIndex > 0)         { setCurrentIndex(i => i - 1); setIsFlipped(false); } };
 
-  // ── Explain handler ────────────────────────────────────────
   const handleExplain = async (e) => {
-    e.stopPropagation(); // prevent card flip
-
-    if (showExplanation) {
-      setShowExplanation(false);
-      return;
-    }
-
-    setIsLoadingExplanation(true);
-    setExplanationError(null);
-
+    e.stopPropagation();
+    if (showExplanation) { setShowExplanation(false); return; }
+    setIsLoadingExplanation(true); setExplanationError(null);
     try {
       const response = await api.explainFlashcard(card.question, card.answer, selectedLanguage);
-      setExplanation(response.data.data.explanation);
-      setShowExplanation(true);
-    } catch (err) {
-      setExplanationError(err.response?.data?.message || err.message || "Failed to generate explanation");
-    } finally {
-      setIsLoadingExplanation(false);
-    }
+      setExplanation(response.data.data.explanation); setShowExplanation(true);
+    } catch (err) { setExplanationError(err.response?.data?.message || err.message || "Failed to generate explanation"); }
+    finally { setIsLoadingExplanation(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(17,47,77,0.5)" }}>
       <div className="w-full max-w-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">{topicName} Flashcards</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-lg transition text-white">
-            <X size={24} />
-          </button>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>{topicName} — Flashcards</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer" }}><X size={18} /></button>
         </div>
 
-        <div className="relative perspective-container">
-          <div className={`flashcard-3d ${isFlipped ? "flipped" : ""}`} onClick={() => setIsFlipped(f => !f)} style={{ cursor: "pointer" }}>
-
-            {/* FRONT */}
-            <div className={`flashcard-face flashcard-front bg-gradient-to-br ${gradient} rounded-3xl p-12 shadow-2xl border-2 border-white/20 min-h-[400px] flex flex-col items-center justify-center`}>
-              <p className="text-white text-2xl leading-relaxed font-medium drop-shadow-lg text-center">{card.question}</p>
+        <div style={{ perspective: "1000px" }}>
+          <div onClick={() => setIsFlipped(f => !f)} style={{ position: "relative", width: "100%", transition: "transform 0.6s", transformStyle: "preserve-3d", transform: isFlipped ? "rotateY(180deg)" : "none", cursor: "pointer" }}>
+            {/* Front */}
+            <div className="rounded-3xl p-10 flex flex-col items-center justify-center min-h-[360px]"
+              style={{ background: `linear-gradient(135deg, ${cardColor}ee, ${cardColor})`, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", position: "relative" }}>
+              <p className="text-white text-xl leading-relaxed font-medium text-center drop-shadow">{card.question}</p>
+              <p className="text-white/60 text-xs mt-4">Click to reveal answer</p>
             </div>
-
-            {/* BACK */}
-            <div className={`flashcard-face flashcard-back bg-gradient-to-br ${gradient} rounded-3xl p-12 shadow-2xl border-2 border-white/20 min-h-[400px] flex flex-col items-center justify-center`}>
-              <div className="text-center w-full">
-                <p className="text-white text-2xl leading-relaxed font-medium drop-shadow-lg mb-6">{card.answer}</p>
-
-                {/* ── Explain button ── */}
-                <button
-                  onClick={handleExplain}
-                  disabled={isLoadingExplanation}
-                  className={`flex items-center gap-2 mx-auto px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-lg text-sm transition border border-white/30 ${
-                    isLoadingExplanation ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  {isLoadingExplanation
-                    ? <><Loader size={16} className="animate-spin" /> Loading...</>
-                    : <><RotateCcw size={16} /> {showExplanation ? "Hide" : "Explain"}</>
-                  }
-                </button>
-
-                {/* ── Explanation text ── */}
-                {showExplanation && explanation && (
-                  <div className="mt-4 p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                    <p className="text-white text-base leading-relaxed">{explanation}</p>
-                  </div>
-                )}
-
-                {/* ── Explanation error ── */}
-                {explanationError && (
-                  <div className="mt-4 p-4 bg-red-500/20 backdrop-blur-sm rounded-lg border border-red-400/30">
-                    <p className="text-red-200 text-sm">{explanationError}</p>
-                  </div>
-                )}
-              </div>
+            {/* Back */}
+            <div className="rounded-3xl p-10 flex flex-col items-center justify-center min-h-[360px]"
+              style={{ background: `linear-gradient(135deg, ${cardColor}ee, ${cardColor})`, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", position: "absolute", top: 0, left: 0, width: "100%", transform: "rotateY(180deg)" }}>
+              <p className="text-white text-xl leading-relaxed font-medium text-center drop-shadow mb-5">{card.answer}</p>
+              <button onClick={handleExplain} disabled={isLoadingExplanation}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition"
+                style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", cursor: "pointer" }}>
+                {isLoadingExplanation ? <><Loader size={14} className="animate-spin" /> Loading...</> : <><RotateCcw size={14} /> {showExplanation ? "Hide" : "Explain"}</>}
+              </button>
+              {showExplanation && explanation && (
+                <div className="mt-3 p-3 rounded-xl max-w-sm" style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                  <p className="text-white text-sm leading-relaxed text-center">{explanation}</p>
+                </div>
+              )}
+              {explanationError && <p className="mt-3 text-white/70 text-xs text-center">{explanationError}</p>}
             </div>
-
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-6 mt-8">
-          <button onClick={goPrev} disabled={currentIndex === 0}
-            className={`p-3 rounded-full transition ${currentIndex === 0 ? "bg-gray-800 text-gray-600 cursor-not-allowed" : "bg-gray-700 hover:bg-gray-600 text-white"}`}>
-            <ChevronLeft size={24} />
+        <div className="flex items-center justify-center gap-5 mt-6">
+          <button onClick={goPrev} disabled={currentIndex === 0} className="p-3 rounded-full transition"
+            style={{ background: currentIndex === 0 ? "var(--border)" : "var(--bg-card)", border: "1px solid var(--border)", color: currentIndex === 0 ? "var(--text-faint)" : "var(--text-primary)", cursor: currentIndex === 0 ? "not-allowed" : "pointer" }}>
+            <ChevronLeft size={20} />
           </button>
-          <div className="text-white text-lg font-semibold min-w-[80px] text-center">{currentIndex + 1} / {total}</div>
-          <button onClick={goNext} disabled={currentIndex === total - 1}
-            className={`p-3 rounded-full transition ${currentIndex === total - 1 ? "bg-gray-800 text-gray-600 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
-            <ChevronRight size={24} />
+          <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{currentIndex + 1} / {total}</span>
+          <button onClick={goNext} disabled={currentIndex === total - 1} className="p-3 rounded-full transition"
+            style={{ background: currentIndex === total - 1 ? "var(--border)" : "var(--brand)", border: "none", color: "white", cursor: currentIndex === total - 1 ? "not-allowed" : "pointer" }}>
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
-
-      <style>{`
-        .perspective-container { perspective: 1000px; }
-        .flashcard-3d { position: relative; width: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
-        .flashcard-3d.flipped { transform: rotateY(180deg); }
-        .flashcard-face { width: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        .flashcard-front { position: relative; }
-        .flashcard-back { position: absolute; top: 0; left: 0; transform: rotateY(180deg); }
-      `}</style>
     </div>
   );
 };

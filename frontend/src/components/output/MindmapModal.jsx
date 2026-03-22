@@ -1,33 +1,23 @@
 import { useState, useEffect } from "react";
-import { X, Download, Loader, Volume2, Pause, Play } from "lucide-react";
+import { X, Download, Loader, Volume2, Pause, Play, Maximize2 } from "lucide-react";
 
-// ── Concept Cards ──────────────────────────────────────────────
 const ConceptCardsView = ({ nodes }) => {
-  if (!nodes?.length) return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-gray-400">No concept cards available</p>
-    </div>
-  );
-
+  if (!nodes?.length) return <div className="flex items-center justify-center h-full"><p style={{ color: "var(--text-faint)" }}>No concept cards available</p></div>;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
       {nodes.map((node, idx) => (
-        <div
-          key={idx}
-          className="rounded-2xl p-6 shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-          style={{ background: `linear-gradient(135deg, ${node.color || "#4299e1"}ee, ${node.color || "#4299e1"})`, color: "white" }}
-        >
-          <div className="text-4xl mb-3">{node.emoji || "📌"}</div>
-          <h3 className="text-xl font-bold mb-2">{node.text || "N/A"}</h3>
-          <p className="text-sm opacity-95 leading-relaxed">{node.description || "No description available"}</p>
+        <div key={idx} className="rounded-2xl p-5 shadow-md transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+          style={{ background: `linear-gradient(135deg, ${node.color || "#4CAEE1"}dd, ${node.color || "#4CAEE1"})`, color: "white" }}>
+          <div className="text-3xl mb-2">{node.emoji || "📌"}</div>
+          <h3 className="text-base font-bold mb-1.5">{node.text || "N/A"}</h3>
+          <p className="text-sm opacity-90 leading-relaxed">{node.description || "No description available"}</p>
         </div>
       ))}
     </div>
   );
 };
 
-// ── Mindmap Renderer ───────────────────────────────────────────
-const MindmapRenderer = ({ data }) => {
+const MindmapRenderer = ({ data, onExpand }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
@@ -35,48 +25,18 @@ const MindmapRenderer = ({ data }) => {
     if (!data || !window.go) return;
     const $ = window.go.GraphObject.make;
     const diagram = $(window.go.Diagram, "mindmap-canvas", {
-      layout: $(window.go.TreeLayout, {
-        angle: 0, layerSpacing: 80, nodeSpacing: 40,
-        arrangement: window.go.TreeLayout.ArrangementHorizontal,
-      }),
-      initialAutoScale: window.go.Diagram.Uniform,
-      contentAlignment: window.go.Spot.Center,
-      padding: 30,
+      layout: $(window.go.TreeLayout, { angle: 0, layerSpacing: 80, nodeSpacing: 40, arrangement: window.go.TreeLayout.ArrangementHorizontal }),
+      initialAutoScale: window.go.Diagram.Uniform, contentAlignment: window.go.Spot.Center, padding: 30,
     });
-
     diagram.nodeTemplate = $(window.go.Node, "Auto",
-      {
-        mouseEnter: (e, node) => {
-          const nd = node.data;
-          if (nd?.description) {
-            const vp = e.diagram.transformDocToView(e.diagram.lastInput.documentPoint);
-            setTooltipPos({ x: vp.x + 20, y: vp.y - 10 });
-            setHoveredNode(nd);
-          }
-        },
-        mouseLeave: () => setHoveredNode(null),
-      },
-      $(window.go.Shape, "RoundedRectangle",
-        { strokeWidth: 2, stroke: "#4b5563", fill: "lightblue", cursor: "pointer" },
-        new window.go.Binding("fill", "color")
-      ),
-      $(window.go.Panel, "Horizontal", { margin: 14 },
-        $(window.go.TextBlock,
-          { font: "bold 22px sans-serif", margin: new window.go.Margin(0, 10, 0, 0), stroke: "white" },
-          new window.go.Binding("text", "emoji")
-        ),
-        $(window.go.TextBlock,
-          { font: "bold 15px sans-serif", stroke: "white", maxSize: new window.go.Size(200, NaN), wrap: window.go.TextBlock.WrapFit, textAlign: "center" },
-          new window.go.Binding("text", "text")
-        )
+      { mouseEnter: (e, node) => { const nd = node.data; if (nd?.description) { const vp = e.diagram.transformDocToView(e.diagram.lastInput.documentPoint); setTooltipPos({ x: vp.x + 20, y: vp.y - 10 }); setHoveredNode(nd); } }, mouseLeave: () => setHoveredNode(null) },
+      $(window.go.Shape, "RoundedRectangle", { strokeWidth: 2, stroke: "#A8D4EE", fill: "#4CAEE1", cursor: "pointer" }, new window.go.Binding("fill", "color")),
+      $(window.go.Panel, "Horizontal", { margin: 12 },
+        $(window.go.TextBlock, { font: "bold 18px Inter, sans-serif", margin: new window.go.Margin(0, 8, 0, 0), stroke: "white" }, new window.go.Binding("text", "emoji")),
+        $(window.go.TextBlock, { font: "bold 13px Inter, sans-serif", stroke: "white", maxSize: new window.go.Size(200, NaN), wrap: window.go.TextBlock.WrapFit, textAlign: "center" }, new window.go.Binding("text", "text"))
       )
     );
-
-    diagram.linkTemplate = $(window.go.Link,
-      { routing: window.go.Link.Orthogonal, corner: 12, curve: window.go.Link.JumpOver },
-      $(window.go.Shape, { strokeWidth: 3, stroke: "#6b7280" })
-    );
-
+    diagram.linkTemplate = $(window.go.Link, { routing: window.go.Link.Orthogonal, corner: 12, curve: window.go.Link.JumpOver }, $(window.go.Shape, { strokeWidth: 2.5, stroke: "#87CEFA" }));
     diagram.model = new window.go.GraphLinksModel(data.nodes || [], data.links || []);
     return () => { diagram.div = null; };
   }, [data]);
@@ -84,11 +44,19 @@ const MindmapRenderer = ({ data }) => {
   return (
     <div className="relative w-full h-full">
       <div id="mindmap-canvas" className="w-full h-full min-h-[550px]" />
+      {/* Expand button */}
+      <button
+        onClick={onExpand}
+        className="absolute top-3 right-3 p-2 rounded-lg transition"
+        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", zIndex: 10 }}
+        title="View fullscreen"
+      >
+        <Maximize2 size={16} />
+      </button>
       {hoveredNode?.description && (
-        <div className="absolute z-50 pointer-events-none"
-          style={{ left: tooltipPos.x, top: tooltipPos.y, transform: "translate(0, -100%)" }}>
-          <div className="bg-gray-900 border-2 border-blue-500 rounded-lg shadow-2xl p-3 max-w-xs">
-            <p className="text-white text-sm leading-relaxed">{hoveredNode.description}</p>
+        <div className="absolute z-50 pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y, transform: "translate(0, -100%)" }}>
+          <div className="rounded-xl p-3 max-w-xs shadow-lg" style={{ background: "var(--bg-card)", border: "1px solid var(--border-strong)" }}>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-primary)" }}>{hoveredNode.description}</p>
           </div>
         </div>
       )}
@@ -96,152 +64,128 @@ const MindmapRenderer = ({ data }) => {
   );
 };
 
-// ── Modal ──────────────────────────────────────────────────────
 const MindmapModal = ({
-  selectedTopic,
-  mindmapData,
-  isGenerating,
-  error,
-  onClose,
-  onRetry,
-  onDownloadPDF,
-  isDownloadingPDF,
-  // Explain audio props
-  onExplainMindmap,
-  isExplainingMindmap,
-  explainAudioLoaded,
-  explainError,
-  isExplainPlaying,
-  explainCurrentTime,
-  explainDuration,
-  onToggleExplainPlayPause,
-  onExplainSeek,
-  formatTime,
+  selectedTopic, mindmapData, isGenerating, error, onClose, onRetry,
+  onDownloadPDF, isDownloadingPDF,
+  onExplainMindmap, isExplainingMindmap, explainAudioLoaded, explainError,
+  isExplainPlaying, explainCurrentTime, explainDuration,
+  onToggleExplainPlayPause, onExplainSeek, formatTime,
 }) => {
   const [showConceptCards, setShowConceptCards] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const tabBtn = (active) => ({
+    padding: "8px 16px", borderRadius: "8px 8px 0 0", border: "none", cursor: "pointer",
+    fontSize: "13px", fontWeight: 500,
+    background: active ? "var(--bg-primary)" : "transparent",
+    color: active ? "var(--brand)" : "var(--text-muted)",
+    borderBottom: active ? "2px solid var(--brand)" : "none",
+    transition: "all 0.15s",
+  });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-      <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+    <>
+      {/* Main mindmap modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(17,47,77,0.4)" }}>
+        <div className="rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
 
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="text-2xl">🗺️</span>
-            Mind Map: {selectedTopic?.topic}
-          </h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-lg transition">
-            <X size={24} className="text-gray-400" />
-          </button>
-        </div>
-
-        {!isGenerating && !error && mindmapData && (
-          <div className="flex flex-col gap-0 border-b border-gray-700">
-
-            {/* Tab row */}
-            <div className="flex gap-2 px-4 pt-4 flex-wrap">
-              <button
-                onClick={() => setShowConceptCards(false)}
-                className={`px-4 py-2 rounded-t-lg transition ${!showConceptCards ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400 hover:text-white"}`}
-              >
-                Mind Map View
-              </button>
-              <button
-                onClick={() => setShowConceptCards(true)}
-                className={`px-4 py-2 rounded-t-lg transition ${showConceptCards ? "bg-gray-700 text-white" : "bg-gray-900 text-gray-400 hover:text-white"}`}
-              >
-                📚 Concept Cards
-              </button>
-              <button
-                onClick={onDownloadPDF}
-                disabled={isDownloadingPDF}
-                className={`px-4 py-2 rounded-t-lg transition flex items-center gap-2 ${
-                  isDownloadingPDF ? "bg-purple-700/50 text-white cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 text-white"
-                }`}
-              >
-                {isDownloadingPDF ? <Loader size={16} className="animate-spin" /> : <Download size={16} />}
-                Download PDF
-              </button>
-
-              {/* ── Explain button ── */}
-              <button
-                onClick={onExplainMindmap}
-                disabled={isExplainingMindmap}
-                className={`px-4 py-2 rounded-t-lg transition flex items-center gap-2 ml-auto ${
-                  isExplainingMindmap
-                    ? "bg-orange-700/50 text-white cursor-not-allowed"
-                    : "bg-orange-500 hover:bg-orange-600 text-white"
-                }`}
-                title="Let AI explain this mind map out loud"
-              >
-                {isExplainingMindmap
-                  ? <><Loader size={16} className="animate-spin" /> Generating...</>
-                  : <><Volume2 size={16} /> 🎙️ Explain</>
-                }
-              </button>
-            </div>
-
-            {/* ── Explain audio player ── */}
-            {(explainAudioLoaded || explainError) && (
-              <div className="mx-4 mb-3 mt-2 bg-gradient-to-r from-orange-900/30 to-yellow-900/30 border border-orange-500/40 rounded-xl px-5 py-3">
-                {explainError ? (
-                  <p className="text-red-300 text-sm">{explainError}</p>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <span className="text-orange-300 text-sm font-medium whitespace-nowrap">🎙️ AI Explanation</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max={explainDuration || 0}
-                      value={explainCurrentTime}
-                      onChange={onExplainSeek}
-                      className="flex-1 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-orange-400"
-                    />
-                    <span className="text-gray-400 text-xs whitespace-nowrap">
-                      {formatTime(explainCurrentTime)} / {formatTime(explainDuration)}
-                    </span>
-                    <button
-                      onClick={onToggleExplainPlayPause}
-                      className="p-2 bg-orange-500 hover:bg-orange-600 rounded-full transition flex-shrink-0"
-                    >
-                      {isExplainPlaying
-                        ? <Pause size={16} className="text-white" fill="white" />
-                        : <Play  size={16} className="text-white ml-0.5" fill="white" />
-                      }
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+            <h3 className="font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <span>🗺️</span> Mind Map: {selectedTopic?.topic}
+            </h3>
+            <button onClick={onClose} className="p-2 rounded-lg transition"
+              style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer" }}>
+              <X size={18} />
+            </button>
           </div>
-        )}
 
-        <div className="flex-1 overflow-auto p-4">
-          {isGenerating ? (
-            <div className="flex flex-col items-center justify-center h-full space-y-4">
-              <Loader size={48} className="animate-spin text-purple-500" />
-              <p className="text-gray-300 text-lg">Generating your mind map...</p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center h-full space-y-4">
-              <div className="bg-red-900/20 border border-red-500 rounded-lg p-6 max-w-md">
-                <p className="text-red-300 text-center mb-4">Failed to generate mind map: {error}</p>
-                <button onClick={onRetry} className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition">
-                  Retry
+          {!isGenerating && !error && mindmapData && (
+            <div style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="flex gap-1 px-4 pt-3 flex-wrap items-center">
+                <button style={tabBtn(!showConceptCards)} onClick={() => setShowConceptCards(false)}>Mind Map View</button>
+                <button style={tabBtn(showConceptCards)} onClick={() => setShowConceptCards(true)}>📚 Concept Cards</button>
+                <button onClick={onDownloadPDF} disabled={isDownloadingPDF}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold ml-1 transition disabled:opacity-50"
+                  style={{ background: "var(--tag-def)", color: "var(--tag-def-text)", border: "1px solid #d7b9e8", cursor: "pointer" }}>
+                  {isDownloadingPDF ? <Loader size={13} className="animate-spin" /> : <Download size={13} />} Download PDF
+                </button>
+                <button onClick={onExplainMindmap} disabled={isExplainingMindmap}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold ml-auto transition disabled:opacity-50"
+                  style={{ background: "var(--tag-fact)", color: "var(--tag-fact-text)", border: "1px solid var(--brand-soft)", cursor: "pointer" }}>
+                  {isExplainingMindmap ? <><Loader size={13} className="animate-spin" /> Generating...</> : <><Volume2 size={13} /> 🎙️ Explain</>}
                 </button>
               </div>
-            </div>
-          ) : mindmapData ? (
-            showConceptCards
-              ? <ConceptCardsView nodes={mindmapData.nodes || []} />
-              : <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg p-4 h-full min-h-[600px]">
-                  <MindmapRenderer data={mindmapData} />
-                </div>
-          ) : null}
-        </div>
 
+              {(explainAudioLoaded || explainError) && (
+                <div className="mx-4 mb-3 mt-2 px-4 py-3 rounded-xl" style={{ background: "var(--bg-primary)", border: "1px solid var(--border-strong)" }}>
+                  {explainError ? (
+                    <p className="text-xs" style={{ color: "var(--alert-text)" }}>{explainError}</p>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--brand)" }}>🎙️ AI Explanation</span>
+                      <input type="range" min="0" max={explainDuration || 0} value={explainCurrentTime} onChange={onExplainSeek}
+                        className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer" style={{ accentColor: "var(--brand)" }} />
+                      <span className="text-xs whitespace-nowrap" style={{ color: "var(--text-faint)" }}>{formatTime(explainCurrentTime)} / {formatTime(explainDuration)}</span>
+                      <button onClick={onToggleExplainPlayPause} className="p-2 rounded-full flex-shrink-0"
+                        style={{ background: "var(--brand)", border: "none", color: "white", cursor: "pointer" }}>
+                        {isExplainPlaying ? <Pause size={13} fill="white" /> : <Play size={13} className="ml-0.5" fill="white" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex-1 overflow-auto p-4">
+            {isGenerating ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <Loader size={40} className="animate-spin" style={{ color: "var(--brand)" }} />
+                <p style={{ color: "var(--text-muted)" }}>Generating your mind map...</p>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="rounded-xl p-5 max-w-md text-center" style={{ background: "var(--alert)", border: "1px solid var(--alert-border)" }}>
+                  <p className="text-sm mb-4" style={{ color: "var(--alert-text)" }}>{error}</p>
+                  <button onClick={onRetry} className="px-4 py-2 rounded-lg text-sm font-semibold"
+                    style={{ background: "var(--brand)", color: "white", border: "none", cursor: "pointer" }}>Retry</button>
+                </div>
+              </div>
+            ) : mindmapData ? (
+              showConceptCards
+                ? <ConceptCardsView nodes={mindmapData.nodes || []} />
+                : <div className="rounded-xl p-3 h-full min-h-[600px]" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}>
+                    <MindmapRenderer data={mindmapData} onExpand={() => setIsExpanded(true)} />
+                  </div>
+            ) : null}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Fullscreen blur overlay for mindmap */}
+      {isExpanded && mindmapData && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+          style={{ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", background: "rgba(17,47,77,0.6)" }}
+          onClick={() => setIsExpanded(false)}
+        >
+          <div
+            className="relative w-full rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border)", maxHeight: "90vh", height: "85vh" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={() => setIsExpanded(false)}
+              className="absolute top-3 right-3 z-10 p-2 rounded-full"
+              style={{ background: "rgba(17,47,77,0.6)", border: "none", color: "white", cursor: "pointer" }}>
+              <X size={18} />
+            </button>
+            <div className="w-full h-full p-4" style={{ background: "var(--bg-primary)" }}>
+              <MindmapRenderer data={mindmapData} onExpand={() => {}} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
